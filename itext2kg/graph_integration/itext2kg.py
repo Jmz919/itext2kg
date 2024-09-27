@@ -94,7 +94,7 @@ class iText2KG:
         return global_relationships
 
 
-    def build_graph(self, sections:List[str], existing_global_entities:List[dict]=None, existing_global_relationships:List[dict]=None, ent_threshold:float = 0.7, rel_threshold:float = 0.7):
+    def build_graph(self, sections:List[str], existing_global_entities:List[dict]=None, existing_global_relationships:List[dict]=None, ent_threshold:float = 0.7, rel_threshold:float = 0.7, resolving_tries:int = 5):
         """
         Builds a knowledge graph from text by extracting entities and relationships and then integrating them into a structured graph. This is the main function of the iText2KG class.
         
@@ -122,13 +122,18 @@ class iText2KG:
         global_relationships = self.irelations_extractor.extract_relations(context=sections[0], entities = list(map(lambda w:w["name"], global_entities)))
         
         isolated_entities = self.data_handler.find_isolated_entities(global_entities=global_entities, relations=global_relationships)
-        while isolated_entities:
+
+        # while isolated_entities:
+        for i in range(resolving_tries):
             print("[INFO] The isolated entities are ", isolated_entities)
             corrected_relations = self.irelations_extractor.extract_relations_for_isolated_entities(context=sections[0], isolated_entities=list(map(lambda w:w["name"],isolated_entities)), local_non_isolated_entities=list(map(lambda w:w["name"],global_entities)))
             matched_corrected_relationships, _ = self.matcher.process_lists(list1 = corrected_relations, list2=global_relationships, for_entity_or_relation="relation", threshold=rel_threshold)
             global_relationships.extend(matched_corrected_relationships)
             # Re-evaluate isolated entities after extending global_relationships
             isolated_entities = self.data_handler.find_isolated_entities(global_entities=global_entities, relations=global_relationships)
+
+            if not isolated_entities:
+                break
         
         global_relationships = self.data_handler.match_relations_with_isolated_entities(global_entities=global_entities, relations=global_relationships, matcher= lambda ent:self.matcher.find_match(ent, global_entities, match_type="entity", threshold=0.5), embedding_calculator= lambda ent:self.langchain_output_parser.calculate_embeddings(ent))    
         
@@ -144,12 +149,18 @@ class iText2KG:
             processed_relationships, _ = self.matcher.process_lists(list1 = relationships, list2=global_relationships, for_entity_or_relation="relation", threshold=rel_threshold)
             
             isolated_entities = self.data_handler.find_isolated_entities(global_entities=processed_entities, relations=processed_relationships)
-            while isolated_entities:
+            # while isolated_entities:
+            for j in range(resolving_tries):
                 print("[INFO] The isolated entities are ", isolated_entities)
                 corrected_relations = self.irelations_extractor.extract_relations_for_isolated_entities(context=sections[i], isolated_entities=list(map(lambda w:w["name"],isolated_entities)), local_non_isolated_entities=list(map(lambda w:w["name"],processed_entities)))
-                matched_corrected_relationships, _ = self.matcher.process_lists(list1 = corrected_relations, list2=global_relationships, for_entity_or_relation="relation", threshold=rel_threshold)
-                processed_relationships.extend(matched_corrected_relationships)
-                isolated_entities = self.data_handler.find_isolated_entities(global_entities=processed_entities, relations=processed_relationships)
+
+                if corrected_relations is not None:      
+                    matched_corrected_relationships, _ = self.matcher.process_lists(list1 = corrected_relations, list2=global_relationships, for_entity_or_relation="relation", threshold=rel_threshold)
+                    processed_relationships.extend(matched_corrected_relationships)
+                    isolated_entities = self.data_handler.find_isolated_entities(global_entities=processed_entities, relations=processed_relationships)
+    
+                    if not isolated_entities:
+                        break
             
             processed_relationships = self.data_handler.match_relations_with_isolated_entities(global_entities=processed_entities, relations=processed_relationships, matcher= lambda ent:self.matcher.find_match(ent, processed_entities, match_type="entity", threshold=0.5), embedding_calculator= lambda ent:self.langchain_output_parser.calculate_embeddings(ent))
 

@@ -37,9 +37,9 @@ class iEntitiesExtractor():
         print(entities)
         
         
-        if "entities" not in entities.keys() or entities == None:
+        if entities == None or "entities" not in entities.keys():
             print("Not formatted in the desired format, we are retrying ....")
-            self.extract_entities(context=context, entities=entities, embeddings=embeddings, property_name=property_name, entity_name_key=entity_name_key)
+            self.extract_entities(context=context, embeddings=embeddings, property_name=property_name, entity_name_key=entity_name_key)
         
         return self.data_handler.add_embeddings_as_property_batch(embeddings_function=lambda x:self.langchain_output_parser.calculate_embeddings(x), 
                                                                   items=entities["entities"],

@@ -27,13 +27,34 @@ class DataHandler:
         list: A list of dictionaries with added embeddings.
         """
         # Copy the items list and preprocess item names using a list comprehension
-        items = [
-            {
-                **item,
-                item_name_key: item[item_name_key].lower().replace("_", " ").replace("-", " "),
-                property_name: {}
-            } for item in items
-        ]
+        items_json = []
+        for item in items:
+            if type(item[item_name_key]) == list:
+                for val in item[item_name_key]:
+                    items_json.append(
+                        {
+                            "label": item["label"],
+                            item_name_key: val.lower().replace("_", " ").replace("-", " "),
+                            property_name: {}
+                        }
+                    )
+            else:
+                items_json.append(
+                    {
+                        **item,
+                        item_name_key: item[item_name_key].lower().replace("_", " ").replace("-", " "),
+                        property_name: {}
+                    }
+                )
+                
+        items = items_json
+        # items = [
+        #     {
+        #         **item,
+        #         item_name_key: item[item_name_key].lower().replace("_", " ").replace("-", " "),
+        #         property_name: {}
+        #     } for item in items
+        # ]
 
         if embeddings:
             # Prepare a list of all item names to calculate embeddings in one shot

@@ -28,6 +28,7 @@ class DocumentsDisiller:
         dict: A combined dictionary with merged values.
         """
         combined_dict = {}
+        print(dict_list)
         
         for d in dict_list:
             for key, value in d.items():

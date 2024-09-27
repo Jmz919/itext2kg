@@ -86,12 +86,13 @@ class GraphIntegrator:
         queries = []
         for node in json_graph["nodes"]:
             properties = []
-            for prop, value in node["properties"].items():
-                if prop == "embeddings":
-                    value = GraphIntegrator.transform_embeddings_to_str_list(value)
-                properties.append(f'SET n.{prop.replace(" ", "_")} = "{value}"')
+            # for prop, value in node["properties"].items():
+            #     if prop == "embeddings":
+            #         value = GraphIntegrator.transform_embeddings_to_str_list(value)
+            #     properties.append(f'SET n.{prop.replace(" ", "_")} = "{value}"')
 
-            query = f'CREATE (n:{node["label"]} {{name: "{node["name"]}"}}) ' + ' '.join(properties)
+            # query = f'CREATE (n:{node["label"]} {{name: "{node["name"]}"}}) ' + ' '.join(properties)
+            query = f'CREATE (n:{node["label"]} {{name: "{node["name"]}"}})'
             queries.append(query)
         return queries
 

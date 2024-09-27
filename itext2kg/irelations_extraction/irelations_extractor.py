@@ -58,7 +58,7 @@ class iRelationsExtractor:
                                                                   item_name_key=relation_name_key,
                                                                   embeddings=embeddings)    
     
-    def extract_relations_for_isolated_entities(self, context: str, local_non_isolated_entities:List[str], isolated_entities:List[str], embeddings: bool = True, property_name = "properties", entity_name_key = "name"):
+    def extract_relations_for_isolated_entities(self, context: str, local_non_isolated_entities:List[str], isolated_entities:List[str], embeddings: bool = True, property_name = "properties", entity_name_key = "name", retries=5):
         """
         Extract and retry extraction for relations of isolated entities without initial relations.
         
@@ -82,11 +82,28 @@ class iRelationsExtractor:
         
         relationships = self.langchain_output_parser.extract_information_as_json_for_context(output_data_structure = RelationshipsExtractor, context=formatted_context, IE_query=IE_query)
         print(relationships)
-        
-        if "relationships" not in relationships.keys() or relationships == None:
-            print("we are retrying ....")
-            self.extract_relations_for_isolated_entities(context=context, isolated_entities=isolated_entities, embeddings=embeddings, property_name=property_name, entity_name_name=entity_name_key)
 
+        if relationships == None or "relationships" not in relationships.keys():
+            for i in range(retries):
+                formatted_context = f"context : \n -- '{context}'"
+        
+                IE_query = f'''
+                # Directives
+                The entities {isolated_entities} are not linked to the given entities {local_non_isolated_entities}. Extract any relation between these isolated entities and the given entities from the context.
+                '''
+                
+                relationships = self.langchain_output_parser.extract_information_as_json_for_context(output_data_structure = RelationshipsExtractor, context=formatted_context, IE_query=IE_query)
+                print(relationships)
+
+                if relationships == None or "relationships" not in relationships.keys():
+                    break
+        
+        # if relationships == None or "relationships" not in relationships.keys():
+        #     print("we are retrying ....")
+        #     self.extract_relations_for_isolated_entities(context=context, local_non_isolated_entities=local_non_isolated_entities, isolated_entities=isolated_entities, embeddings=embeddings, property_name=property_name, entity_name_key=entity_name_key, retries=retries+1)
+
+        if relationships == None or "relationships" not in relationships.keys():
+            return None
 
         return self.data_handler.add_embeddings_as_property_batch(embeddings_function=lambda x:self.langchain_output_parser.calculate_embeddings(x), 
                                                                   items=relationships["relationships"],
